@@ -50,9 +50,17 @@ public class MorseDecoder {
          */
         int totalBinCount = (int) Math.ceil(inputFile.getNumFrames() / BIN_SIZE);
         double[] returnBuffer = new double[totalBinCount];
-
         double[] sampleBuffer = new double[BIN_SIZE * inputFile.getNumChannels()];
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
+            int framesRead = inputFile.readFrames(sampleBuffer, BIN_SIZE);
+            returnBuffer[binIndex] = 0;
+            for (int sampleCount = 0; sampleCount < sampleBuffer.length; sampleCount++) {
+                returnBuffer[binIndex] += Math.abs(sampleBuffer[sampleCount]);
+            }
+            if ((framesRead < BIN_SIZE) && (binIndex == totalBinCount - 1)) {
+                throw new WavFileException("short read from WAV file");
+            }
+
             // Get the right number of samples from the inputFile
             // Sum all the samples together and store them in the returnBuffer
         }
@@ -81,13 +89,31 @@ public class MorseDecoder {
          * There are four conditions to handle. Symbols should only be output when you see
          * transitions. You will also have to store how much power or silence you have seen.
          */
-
+        String morse = "";
+        for (int i = 1; i < powerMeasurements.length; i++) {
+            boolean isPower = (i > POWER_THRESHOLD);
+            boolean wasPower = (i - 1) > POWER_THRESHOLD;
+            boolean isSilence = (i < POWER_THRESHOLD);
+            boolean wasSilence = (i - 1) < POWER_THRESHOLD;
+            if (isPower && wasPower) {
+                morse += "-";
+            }
+            if (isPower && !wasPower) {
+                morse += ".";
+            }
+            if (isSilence && wasSilence) {
+                morse += " ";
+            }
+            if (isSilence && !wasSilence) {
+                morse += "";
+            }
+        }
         // if ispower and waspower
         // else if ispower and not waspower
         // else if issilence and wassilence
         // else if issilence and not wassilence
 
-        return "";
+        return morse;
     }
 
     /**
